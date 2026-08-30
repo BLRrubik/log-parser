@@ -29,7 +29,7 @@ func main() {
 func ReadLogFile(filepath string) ([]LogEntry, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
 	defer file.Close()
 
