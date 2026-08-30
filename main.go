@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"time"
 )
@@ -18,18 +20,46 @@ type LogEntry struct {
 }
 
 func main() {
-	logExpample := "2023-12-25T14:30:15.123Z [INFO] user-service: User authenticated, request_id=req_abc123, user_id=12345"
-
-	entry, err := ParseLogLine(logExpample)
+	_, err := ReadLogFile("sample.log")
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
-	fmt.Println("Parsed Log Entry:", entry)
+func ReadLogFile(filepath string) ([]LogEntry, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var (
+		totalLines int
+		errorLines int
+		entries    = make([]LogEntry, 0)
+	)
+	for scanner.Scan() {
+		totalLines++
+
+		entry, err := ParseLogLine(scanner.Text())
+		if err != nil {
+			errorLines++
+			continue
+		}
+
+		entries = append(entries, entry)
+	}
+
+	fmt.Println("Total lines:", totalLines)
+	fmt.Println("Error lines:", errorLines)
+	fmt.Println("Successfully parsed lines:", totalLines-errorLines)
+
+	return entries, scanner.Err()
 }
 
 func ParseLogLine(line string) (LogEntry, error) {
-	pattern := regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+\[(INFO|WARNING)]\s+(\S+):\s([^,]+),\s+request_id=([^,]+),\s+user_id=(\S+)$`)
+	pattern := regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+\[(INFO|WARNING|ERROR)]\s+(\S+):\s([^,]+),\s+request_id=([^,]+),\s+user_id=(\S+)$`)
 	matches := pattern.FindStringSubmatch(line)
 	if len(matches) == 0 {
 		return LogEntry{}, errors.New("could not parse Log Entry")
