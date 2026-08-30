@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -30,8 +31,11 @@ func main() {
 func ParseLogLine(line string) (LogEntry, error) {
 	pattern := regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+\[(INFO|WARNING)]\s+(\S+):\s([^,]+),\s+request_id=([^,]+),\s+user_id=(\S+)$`)
 	matches := pattern.FindStringSubmatch(line)
+	if len(matches) == 0 {
+		return LogEntry{}, errors.New("could not parse Log Entry")
+	}
 
-	timestamp, err := time.Parse(time.RFC3339, matches[1])
+	timestamp, err := time.Parse("2006-01-02T15:04:05.000Z", matches[1])
 	if err != nil {
 		return LogEntry{}, fmt.Errorf("failed to parse timestamp: %w", err)
 	}
