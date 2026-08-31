@@ -21,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	entries, err := processor.ProcessMultipleFiles(filePaths)
+	entries, err := processor.ProcessFilesConcurrently(filePaths, 8)
 	if err != nil {
 		log.Fatal(err)
 	}

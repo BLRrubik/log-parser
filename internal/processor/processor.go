@@ -6,7 +6,47 @@ import (
 	"log-parser/internal/parser"
 	"os"
 	"sort"
+	"sync"
 )
+
+func ProcessFilesConcurrently(filePaths []string, numWorkers int) ([]parser.LogEntry, error) {
+	jobs := make(chan string, 100)
+	results := make(chan []parser.LogEntry, 100)
+
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fileWorker(jobs, results)
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for _, filePath := range filePaths {
+		jobs <- filePath
+	}
+
+	close(jobs)
+
+	var entries []parser.LogEntry
+	for result := range results {
+		entries = append(entries, result...)
+	}
+
+	return entries, nil
+}
+
+func fileWorker(jobs <-chan string, results chan<- []parser.LogEntry) {
+	for path := range jobs {
+		entries, _ := ReadLogFile(path)
+		results <- entries
+	}
+}
 
 func ProcessMultipleFiles(filePaths []string) ([]parser.LogEntry, error) {
 	var entries []parser.LogEntry
