@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -20,6 +21,10 @@ type LogEntry struct {
 	Message   string
 	RequestID string
 	UserID    string
+}
+
+func (e LogEntry) IsError() bool {
+	return e.Level == "ERROR" || e.Level == "WARNING"
 }
 
 func main() {
@@ -35,8 +40,14 @@ func main() {
 
 	requests := CorrelateRequests(entries)
 
-	for _, entry := range requests["req_f39523"] {
+	failedRequestIDs := DetectFailedRequests(requests)
+
+	for _, entry := range requests[failedRequestIDs[0]] {
 		fmt.Println("\t - ", entry)
+	}
+
+	if entry, ok := FindFirstFailure(requests[failedRequestIDs[0]]); ok {
+		fmt.Println("first failed request ID", entry)
 	}
 }
 
@@ -132,4 +143,34 @@ func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
 	}
 
 	return mp
+}
+
+func DetectFailedRequests(correlatedRequests map[string][]LogEntry) []string {
+	var failedRequests []string
+
+	for requestID, entries := range correlatedRequests {
+		for _, entry := range entries {
+			if entry.IsError() {
+				failedRequests = append(failedRequests, requestID)
+
+				break
+			}
+		}
+	}
+
+	return failedRequests
+}
+
+func FindFirstFailure(requestEntries []LogEntry) (LogEntry, bool) {
+	sort.Slice(requestEntries, func(i, j int) bool {
+		return requestEntries[i].Timestamp.Before(requestEntries[j].Timestamp)
+	})
+
+	for _, entry := range requestEntries {
+		if entry.IsError() {
+			return entry, true
+		}
+	}
+
+	return LogEntry{}, false
 }
