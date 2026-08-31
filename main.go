@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -20,10 +23,17 @@ type LogEntry struct {
 }
 
 func main() {
-	_, err := ReadLogFile("sample.log")
+	filePaths, err := ScanLogDirectory("logs")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	entries, err := ProcessMultipleFiles(filePaths)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(entries)
+	fmt.Println(len(entries))
 }
 
 func ReadLogFile(filepath string) ([]LogEntry, error) {
@@ -78,4 +88,35 @@ func ParseLogLine(line string) (LogEntry, error) {
 		RequestID: matches[5],
 		UserID:    matches[6],
 	}, nil
+}
+
+func ScanLogDirectory(dirPath string) ([]string, error) {
+	var logFiles []string
+
+	filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".log") {
+			logFiles = append(logFiles, path)
+		}
+		return nil
+	})
+
+	return logFiles, nil
+}
+
+func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
+	var entries []LogEntry
+
+	for _, filePath := range filePaths {
+		fileEntries, err := ReadLogFile(filePath)
+		if err != nil {
+			continue
+		}
+
+		entries = append(entries, fileEntries...)
+	}
+
+	return entries, nil
 }
