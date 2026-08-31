@@ -39,8 +39,8 @@ func (e LogEntry) String() string {
 }
 
 type AnalysisResult struct {
-	TotalEntries          int                   `json:"total_entries_processed"`
-	FailedCount           int                   `json:"failed_requests_found"`
+	TotalEntriesProcessed int                   `json:"total_entries_processed"`
+	FailedRequestsFount   int                   `json:"failed_requests_found"`
 	ProcessingTimeSeconds float64               `json:"processing_time_seconds"`
 	FailedRequests        []FailedRequestReport `json:"failed_requests"`
 }
@@ -68,9 +68,9 @@ func main() {
 	failedRequestIDs := DetectFailedRequests(requests)
 
 	analysisResult := AnalysisResult{
-		TotalEntries:   len(entries),
-		FailedCount:    len(failedRequestIDs),
-		FailedRequests: make([]FailedRequestReport, 0, len(failedRequestIDs)),
+		TotalEntriesProcessed: len(entries),
+		FailedRequestsFount:   len(failedRequestIDs),
+		FailedRequests:        make([]FailedRequestReport, 0, len(failedRequestIDs)),
 	}
 	for _, request := range failedRequestIDs {
 		failedEntries := SortTimelineByTimestamp(requests[request])
