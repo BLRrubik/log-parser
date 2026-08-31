@@ -40,7 +40,7 @@ func (e LogEntry) String() string {
 
 type AnalysisResult struct {
 	TotalEntriesProcessed int                   `json:"total_entries_processed"`
-	FailedRequestsFount   int                   `json:"failed_requests_found"`
+	FailedRequestsFound   int                   `json:"failed_requests_found"`
 	ProcessingTimeSeconds float64               `json:"processing_time_seconds"`
 	FailedRequests        []FailedRequestReport `json:"failed_requests"`
 }
@@ -69,7 +69,7 @@ func main() {
 
 	analysisResult := AnalysisResult{
 		TotalEntriesProcessed: len(entries),
-		FailedRequestsFount:   len(failedRequestIDs),
+		FailedRequestsFound:   len(failedRequestIDs),
 		FailedRequests:        make([]FailedRequestReport, 0, len(failedRequestIDs)),
 	}
 	for _, request := range failedRequestIDs {
