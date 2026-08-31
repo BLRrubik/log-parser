@@ -42,7 +42,13 @@ func main() {
 
 	failedRequestIDs := DetectFailedRequests(requests)
 
+	fmt.Println("find failed requests:")
 	for _, entry := range requests[failedRequestIDs[0]] {
+		fmt.Println("\t - ", entry)
+	}
+
+	fmt.Println("sorted failed requests:")
+	for _, entry := range SortTimelineByTimestamp(requests[failedRequestIDs[0]]) {
 		fmt.Println("\t - ", entry)
 	}
 
@@ -173,4 +179,15 @@ func FindFirstFailure(requestEntries []LogEntry) (LogEntry, bool) {
 	}
 
 	return LogEntry{}, false
+}
+
+func SortTimelineByTimestamp(entries []LogEntry) []LogEntry {
+	copied := make([]LogEntry, len(entries))
+	copy(copied, entries)
+
+	sort.Slice(copied, func(i, j int) bool {
+		return copied[i].Timestamp.Before(copied[j].Timestamp)
+	})
+
+	return copied
 }
