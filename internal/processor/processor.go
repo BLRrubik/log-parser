@@ -2,6 +2,7 @@ package processor
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log-parser/internal/parser"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"sync"
 )
 
-func ProcessFilesConcurrently(filePaths []string, numWorkers int) ([]parser.LogEntry, error) {
+func ProcessFilesConcurrently(ctx context.Context, filePaths []string, numWorkers int) ([]parser.LogEntry, error) {
 	jobs := make(chan string, 100)
 	results := make(chan []parser.LogEntry, 100)
 
@@ -18,7 +19,7 @@ func ProcessFilesConcurrently(filePaths []string, numWorkers int) ([]parser.LogE
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			fileWorker(jobs, results)
+			fileWorker(ctx, jobs, results)
 		}()
 	}
 
@@ -41,10 +42,19 @@ func ProcessFilesConcurrently(filePaths []string, numWorkers int) ([]parser.LogE
 	return entries, nil
 }
 
-func fileWorker(jobs <-chan string, results chan<- []parser.LogEntry) {
-	for path := range jobs {
-		entries, _ := ReadLogFile(path)
-		results <- entries
+func fileWorker(ctx context.Context, jobs <-chan string, results chan<- []parser.LogEntry) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case path, ok := <-jobs:
+			if !ok {
+				return
+			}
+
+			entries, _ := ReadLogFile(path)
+			results <- entries
+		}
 	}
 }
 

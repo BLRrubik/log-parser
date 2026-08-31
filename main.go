@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"log-parser/internal/cli"
 	"log-parser/internal/processor"
 	"log-parser/internal/reporter"
 	"log-parser/internal/scanner"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -16,12 +20,24 @@ func main() {
 	}
 
 	now := time.Now()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+
+	go func() {
+		<-sigChan
+		fmt.Println("Получен сигнал прерывания...")
+		cancel()
+	}()
+
 	filePaths, err := scanner.ScanLogDirectory(cfg.InputDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	entries, err := processor.ProcessFilesConcurrently(filePaths, 8)
+	entries, err := processor.ProcessFilesConcurrently(ctx, filePaths, 2)
 	if err != nil {
 		log.Fatal(err)
 	}
