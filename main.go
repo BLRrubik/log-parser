@@ -32,8 +32,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(entries)
-	fmt.Println(len(entries))
+
+	requests := CorrelateRequests(entries)
+
+	for _, entry := range requests["req_f39523"] {
+		fmt.Println("\t - ", entry)
+	}
 }
 
 func ReadLogFile(filepath string) ([]LogEntry, error) {
@@ -119,4 +123,13 @@ func ProcessMultipleFiles(filePaths []string) ([]LogEntry, error) {
 	}
 
 	return entries, nil
+}
+
+func CorrelateRequests(entries []LogEntry) map[string][]LogEntry {
+	mp := make(map[string][]LogEntry)
+	for _, entry := range entries {
+		mp[entry.RequestID] = append(mp[entry.RequestID], entry)
+	}
+
+	return mp
 }
