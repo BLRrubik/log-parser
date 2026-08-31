@@ -2,37 +2,41 @@ package main
 
 import (
 	"log"
+	"log-parser/internal/cli"
+	"log-parser/internal/processor"
+	"log-parser/internal/reporter"
+	"log-parser/internal/scanner"
 	"time"
 )
 
 func main() {
-	cfg, err := ParseCommandLineArgs()
+	cfg, err := cli.ParseCommandLineArgs()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	now := time.Now()
-	filePaths, err := ScanLogDirectory(cfg.InputDir)
+	filePaths, err := scanner.ScanLogDirectory(cfg.InputDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	entries, err := ProcessMultipleFiles(filePaths)
+	entries, err := processor.ProcessMultipleFiles(filePaths)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	requests := CorrelateRequests(entries)
-	failedRequestIDs := DetectFailedRequests(requests)
+	requests := processor.CorrelateRequests(entries)
+	failedRequestIDs := processor.DetectFailedRequests(requests)
 
-	analysisResult := AnalysisResult{
+	analysisResult := reporter.AnalysisResult{
 		TotalEntriesProcessed: len(entries),
 		FailedRequestsFound:   len(failedRequestIDs),
-		FailedRequests:        make([]FailedRequestReport, 0, len(failedRequestIDs)),
+		FailedRequests:        make([]reporter.FailedRequestReport, 0, len(failedRequestIDs)),
 	}
 	for _, request := range failedRequestIDs {
-		failedEntries := SortTimelineByTimestamp(requests[request])
-		firstEntry, ok := FindFirstFailure(failedEntries)
+		failedEntries := processor.SortTimelineByTimestamp(requests[request])
+		firstEntry, ok := processor.FindFirstFailure(failedEntries)
 		if !ok {
 			continue
 		}
@@ -42,7 +46,7 @@ func main() {
 			timeLine = append(timeLine, entry.String())
 		}
 
-		failedReport := FailedRequestReport{
+		failedReport := reporter.FailedRequestReport{
 			RequestID:      request,
 			FailingService: firstEntry.Service,
 			ErrorMessage:   firstEntry.Message,
@@ -55,7 +59,7 @@ func main() {
 	processingTime := time.Since(now).Seconds()
 	analysisResult.ProcessingTimeSeconds = processingTime
 
-	if err = WriteJSONReport(analysisResult, cfg.OutputFile); err != nil {
+	if err = reporter.WriteJSONReport(analysisResult, cfg.OutputFile); err != nil {
 		log.Fatal(err)
 	}
 }
